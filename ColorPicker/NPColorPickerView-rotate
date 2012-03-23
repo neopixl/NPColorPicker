@@ -1,0 +1,368 @@
+//
+//  NPColorPickerView.m
+//  ColorPicker
+//
+//  Created by Emmanuel Valentin on 09/03/12.
+//  Copyright (c) 2012 __MyCompanyName__. All rights reserved.
+//
+
+#import "NPColorPickerView.h"
+#import <QuartzCore/QuartzCore.h>
+
+#import "NPConicGradient.h"
+#import "RGB-HSL.h"
+#import "NPPickerIndicator.h"
+
+@implementation NPColorPickerView {
+   NPConicGradient * conicGradient_;
+   CALayer * svLayer_;
+   NSMutableArray * hueIndicators_;
+   NPPickerIndicator * hueIndicator_;
+   NPPickerIndicator * svIndicator_;
+}
+
+@synthesize color = color_;
+@synthesize insets;
+@synthesize haloThickness = haloThickness_;
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+       
+       conicGradient_ = [[NPConicGradient alloc]init];
+       conicGradient_.startAngle = 0;
+       conicGradient_.endAngle = 2*M_PI;
+       [conicGradient_ addColor:[UIColor colorWithHue:0.0f saturation:0.0f brightness:0.0f alpha:1.0f] atPosition:0.0f ];
+       [conicGradient_ addColor:[UIColor colorWithHue:1.0f saturation:0.0f brightness:0.0f alpha:1.0f] atPosition:1.0f ]; 
+       
+       conicGradient_.interpolater = ^void(CGFloat percent, CGFloat sourceComps[], CGFloat endComps[], CGFloat outCompts[], size_t s)  {
+          
+          CGFloat sh;
+          CGFloat ss; 
+          CGFloat sv;
+          
+          CGFloat eh;
+          CGFloat es; 
+          CGFloat ev;
+          
+          CGFloat ih;
+          CGFloat is; 
+          CGFloat iv;
+          
+          RGBtoHSV(sourceComps[0], sourceComps[1], sourceComps[2], &sh, &ss, &sv);
+          RGBtoHSV(endComps[0], endComps[1], endComps[2], &eh, &es, &ev);
+          
+          ih = sh + ((eh - sh) * percent);
+          is = ss + ((es - ss) * percent);
+          iv = sv + ((ev - sv) * percent);
+          outCompts[3] = sourceComps[3] + ((endComps[3] - sourceComps[3]) * percent);
+
+          HSVtoRGB(&outCompts[0], &outCompts[1], &outCompts[2], ih, is, iv );
+          
+       };
+       
+        // Initialization code
+    }
+    return self;
+}
+
+-(void)awakeFromNib {
+   
+   self.haloThickness = 50;
+   
+   self.insets = UIEdgeInsetsMake(15,15, 15, 15);
+   
+   conicGradient_ = [[NPConicGradient alloc]init];
+   conicGradient_.startAngle = 0;
+   conicGradient_.endAngle = 2*M_PI;
+   [conicGradient_ addColor:[UIColor colorWithHue:0.0001f saturation:1.0f brightness:1.0f alpha:1.0f] atPosition:0.0f ];
+   [conicGradient_ addColor:[UIColor colorWithHue:0.9999f saturation:1.0f brightness:1.0f alpha:1.0f] atPosition:1.0f ]; 
+   
+   conicGradient_.interpolater = ^void(CGFloat percent, CGFloat sourceComps[], CGFloat endComps[], CGFloat outCompts[], size_t s)  {
+      
+      CGFloat sh;
+      CGFloat ss; 
+      CGFloat sv;
+      
+      CGFloat eh;
+      CGFloat es; 
+      CGFloat ev;
+      
+      CGFloat ih;
+      CGFloat is; 
+      CGFloat iv;
+      
+      RGBtoHSV(sourceComps[0], sourceComps[1], sourceComps[2], &sh, &ss, &sv);
+      RGBtoHSV(endComps[0], endComps[1], endComps[2], &eh, &es, &ev);
+      
+      ih = sh + ((eh - sh) * percent);
+      is = ss + ((es - ss) * percent);
+      iv = sv + ((ev - sv) * percent);
+      outCompts[3] = sourceComps[3] + ((endComps[3] - sourceComps[3]) * percent);
+      
+      HSVtoRGB(&outCompts[0], &outCompts[1], &outCompts[2], ih, is, iv );
+   };
+   
+   svLayer_ = [CALayer layer];
+   svLayer_.delegate = self;
+   
+   hueIndicators_ = [[NSMutableArray alloc] initWithCapacity:3];
+   
+   hueIndicator_ = [[NPPickerIndicator alloc] initWithFrame:CGRectZero];
+   hueIndicator_.insets = UIEdgeInsetsMake(5,5,5,5);
+   hueIndicator_.borderWidth = 7;
+   [hueIndicators_ addObject:hueIndicator_];
+   [self addSubview:hueIndicator_];
+   UIPanGestureRecognizer * panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(onMoveHueIndicator:)];
+   [hueIndicator_ addGestureRecognizer:panGesture];
+   
+   svIndicator_ = [[NPPickerIndicator alloc] initWithFrame:CGRectZero];
+   svIndicator_.insets = UIEdgeInsetsMake(5,5,5,5);
+   svIndicator_.borderWidth = 7;
+   [self addSubview:svIndicator_];
+   
+   panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(onMoveSVIndicator:)];
+   [svIndicator_ addGestureRecognizer:panGesture];
+   
+   self.color = [UIColor colorWithHue:1.00 saturation:1.0f brightness:0.0f alpha:1.0f];
+}
+
+-(CGFloat) angleForHue:(CGFloat) hue {
+   return hue * 2 * M_PI;
+}
+
+-(CGFloat) hueForAngle:(CGFloat) angle {
+   return angle / 2 * M_PI;
+}
+
+-(CGPoint)indicatorCenterForHue:(CGFloat) hue {
+   CGRect viewFrame = self.bounds;
+   viewFrame = (CGRect) { viewFrame.origin.x + self.insets.left, viewFrame.origin.y+ self.insets.top,
+      viewFrame.size.width - self.insets.left - self.insets.right, viewFrame.size.height - self.insets.top - self.insets.bottom};
+
+   CGFloat radius = ((MIN(viewFrame.size.width, viewFrame.size.height) - haloThickness_ ) / 2);
+   CGFloat hueRad = [self angleForHue:hue];
+   CGPoint center = CGPointMake(CGRectGetMidX(viewFrame), CGRectGetMidY(viewFrame));
+   return (CGPoint) { center.x + (cosf(hueRad) * radius),  center.y + (sinf(hueRad) * radius) };
+}
+
+-(CGPoint)indicatorCenterForHue:(CGFloat) hue saturation:(CGFloat) saturation brightness:(CGFloat) brightness {
+   CGRect viewFrame = self.bounds;
+   viewFrame = (CGRect) { viewFrame.origin.x + self.insets.left, viewFrame.origin.y+ self.insets.top,
+      viewFrame.size.width - self.insets.left - self.insets.right, viewFrame.size.height - self.insets.top - self.insets.bottom};
+   CGFloat internalRadius = (MIN(viewFrame.size.width, viewFrame.size.height) / 2) - haloThickness_;
+   CGPoint center = CGPointMake(CGRectGetMidX(viewFrame), CGRectGetMidY(viewFrame));
+
+   CGFloat teta = M_PI/3 * saturation;
+   CGFloat start = [self angleForHue:hue];
+
+   CGFloat l = brightness * ( (sqrtf(3) / 2) / cosf(fabsf(teta - (M_PI/6))));
+   CGPoint s = (CGPoint) { center.x + cosf(start + 2*M_PI/3) * internalRadius, center.y + sinf(start + 2*M_PI/3) * internalRadius };   
+   CGPoint b = (CGPoint) { center.x + cosf(start + 4*M_PI/3) * internalRadius, center.y + sinf(start + 4*M_PI/3) * internalRadius };
+   
+   CGPoint v = (CGPoint) { l * ( b.x - s.x), l * (b.y - s.y)};
+   CGPoint r = (CGPoint) { (v.x * cosf(teta)) - (v.y * sinf(teta)), (v.x * sinf(teta)) + (v.y * cosf(teta))};
+   
+   
+   return CGPointMake(floorf(s.x + r.x), floorf(s.y + r.y));
+}
+
+-(void)getSaturation:(CGFloat *) sat brightness:(CGFloat *) brightness forHue:(CGFloat) hue position:(CGPoint) pos {
+
+   CGRect viewFrame = self.bounds;
+   viewFrame = (CGRect) { viewFrame.origin.x + self.insets.left, viewFrame.origin.y+ self.insets.top,
+      viewFrame.size.width - self.insets.left - self.insets.right, viewFrame.size.height - self.insets.top - self.insets.bottom};
+   CGFloat internalRadius = (MIN(viewFrame.size.width, viewFrame.size.height) / 2) - haloThickness_;
+   CGPoint center = CGPointMake(CGRectGetMidX(viewFrame), CGRectGetMidY(viewFrame));
+
+   CGFloat start = [self angleForHue:hue];
+
+   CGPoint s = (CGPoint) { cosf(start + 2*M_PI/3) * internalRadius, sinf(start + 2*M_PI/3) * internalRadius };   
+   CGPoint b = (CGPoint) { cosf(start + 4*M_PI/3) * internalRadius, sinf(start + 4*M_PI/3) * internalRadius };
+   pos.x -= center.x;
+   pos.y -= center.y;
+   
+   CGPoint v1 = (CGPoint) { b.x - s.x , b.y - s.y  };
+   CGPoint v2 = (CGPoint) { pos.x-s.x  ,  pos.y - s.y };
+   
+   CGFloat teta = atan2f(v1.x,v1.y) - (atan2f(v2.x, v2.y));
+   if (teta > M_PI) {
+      teta = 0.00001;
+   } else if (teta > M_PI / 3) {
+      teta = M_PI / 3;
+   };
+   
+   if (sat) {
+      *sat = MAX(0.00001,(teta / (M_PI/3))) ;
+   }
+   
+   if (brightness) {
+      CGFloat v1l = sqrtf(v1.x*v1.x + v1.y*v1.y);
+      CGFloat max = v1l  * ( (sqrtf(3) / 2) / cosf(fabsf(teta - (M_PI/6))));
+      CGFloat l = sqrtf(v2.x*v2.x + v2.y*v2.y);
+      *brightness = MIN( l, max) / max ;
+   }
+   
+}
+
+-(void)layoutSubviews {
+   [super layoutSubviews];
+   CGFloat hue, sat,brightness;
+   [color_ getHue:&hue saturation:&sat brightness:&brightness alpha:NULL];
+   
+   CGPoint center = [self indicatorCenterForHue:hue];
+   
+   hueIndicator_ .frame = CGRectMake(center.x - (haloThickness_/2), center.y  - (haloThickness_/2), haloThickness_, haloThickness_);
+   
+   center = [self indicatorCenterForHue:hue saturation:sat brightness:brightness];
+   svIndicator_. frame = CGRectMake(center.x - (haloThickness_/2), center.y  - (haloThickness_/2), haloThickness_, haloThickness_);
+}
+
+-(void)setColor:(UIColor *)color {
+   color_ = color;
+   CGFloat hue, sat,brightness;
+   [color getHue:&hue saturation:&sat brightness:&brightness alpha:NULL];
+   
+   hueIndicator_.fillColor = [UIColor colorWithHue:hue saturation:1.0f brightness:1.0f alpha:1.0f];
+   svIndicator_.fillColor = color_;
+
+   [self setNeedsDisplay];
+   [hueIndicator_ setNeedsDisplay];
+   [svIndicator_ setNeedsDisplay];
+   [self setNeedsLayout];
+}
+
+- (void)drawRect:(CGRect)rect
+{
+   CGContextRef context = UIGraphicsGetCurrentContext();
+   CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
+
+   CGRect viewFrame = self.bounds;
+   viewFrame = (CGRect) { viewFrame.origin.x + self.insets.left, viewFrame.origin.y+ self.insets.top,
+      viewFrame.size.width - self.insets.left - self.insets.right, viewFrame.size.height - self.insets.top - self.insets.bottom};
+   
+   // draw the hue gradient halo 
+   CGFloat maxRadius = MIN(viewFrame.size.width, viewFrame.size.height) / 2;
+   CGFloat internalRadius = maxRadius - haloThickness_;
+   CGPoint center = CGPointMake(CGRectGetMidX(viewFrame), CGRectGetMidY(viewFrame));
+   conicGradient_.center = center;
+   conicGradient_.radius = maxRadius;
+   
+   CGContextSaveGState(context);
+
+   CGMutablePathRef path = CGPathCreateMutable();
+   // the donut is reduced by 1 at both diameters because to clip op includes the path thickness
+   CGPathAddRelativeArc(path, &CGAffineTransformIdentity, center.x, center.y, maxRadius - 1, 0, 2*M_PI);  
+   CGPathMoveToPoint(path, &CGAffineTransformIdentity, center.x + internalRadius, center.y);
+   CGPathAddRelativeArc(path, &CGAffineTransformIdentity, center.x, center.y, internalRadius + 1, 0, 2*M_PI);
+
+   CGContextAddPath(context, path);
+   CGPathRelease(path);
+   
+   CGContextEOClip(context);
+   
+   [conicGradient_ drawInContext:context];
+
+   CGContextRestoreGState(context);
+
+   CGContextSetStrokeColorWithColor(context, [UIColor colorWithWhite:0.58 alpha:0.5] .CGColor);
+   CGContextSetLineWidth(context, 3.0f);
+
+   path = CGPathCreateMutable();
+   CGPathAddRelativeArc(path, &CGAffineTransformIdentity, center.x, center.y, maxRadius, 0, 2*M_PI);
+   CGPathMoveToPoint(path, &CGAffineTransformIdentity, center.x + internalRadius, center.y);
+   CGPathAddRelativeArc(path, &CGAffineTransformIdentity, center.x, center.y, internalRadius, 0, 2*M_PI);
+   CGContextAddPath(context, path);
+   CGContextStrokePath(context);
+   CGPathRelease(path);
+   
+   CGContextSaveGState(context);
+   
+   // triangle
+   CGFloat hue;
+   [self.color getHue:&hue saturation:NULL brightness:NULL alpha:NULL];
+
+   CGFloat start = [self angleForHue:hue];
+   CGPoint edges[3]; 
+   edges[0] = (CGPoint) { center.x + cosf(start) * internalRadius, center.y + sinf(start) * internalRadius };   
+   edges[1] = (CGPoint) { center.x + cosf(start + (2*M_PI/3)) * internalRadius, center.y + sinf(start + (2*M_PI/3)) * internalRadius };   
+   edges[2] = (CGPoint) { center.x + cosf(start + (4*M_PI/3)) * internalRadius, center.y + sinf(start + (4*M_PI/3)) * internalRadius };   
+   
+   path = CGPathCreateMutable();
+   CGPathAddLines(path, &CGAffineTransformIdentity, edges, 3);
+   CGPathCloseSubpath(path);
+
+   CGContextAddPath(context, path);
+   CGContextStrokePath(context);
+   
+   CGContextAddPath(context, path);
+   CGContextClip(context);
+   
+   NSArray * a = [NSArray arrayWithObjects:
+                  (id)[UIColor colorWithHue:hue saturation:1.0f brightness:1.0f alpha:1.0f].CGColor,
+                  (id)[UIColor colorWithHue:hue saturation:1.0f brightness:1.0f alpha:1.0f].CGColor,
+                  nil];
+   CGFloat locations[]  = {0.0f, 1.0f};
+   
+   CGGradientRef gradient = CGGradientCreateWithColors(colorspace, (__bridge CFArrayRef)a, locations);
+   CGContextDrawLinearGradient(context,gradient, edges[0], (CGPoint) { (edges[1].x + edges[2].x)/2,(edges[1].y + edges[2].y)/2}, kCGGradientDrawsBeforeStartLocation); 
+   CGGradientRelease(gradient);
+   a = [NSArray arrayWithObjects:
+        (id)[UIColor colorWithHue:0 saturation:1.0f brightness:0.0f alpha:1.0f].CGColor,
+        (id)[UIColor colorWithHue:0 saturation:1.0f brightness:0.0f alpha:0.0f].CGColor,
+        nil];
+  
+
+   gradient = CGGradientCreateWithColors(colorspace, (__bridge CFArrayRef)a, locations);
+   
+   CGContextDrawLinearGradient(context,gradient, edges[1], (CGPoint) { (edges[0].x + edges[2].x)/2,(edges[0].y + edges[2].y)/2}, kCGGradientDrawsBeforeStartLocation); 
+   CGGradientRelease(gradient);
+   a = [NSArray arrayWithObjects:
+        (id)[UIColor colorWithHue:0 saturation:0.0f brightness:1.0f alpha:1.0f].CGColor,
+        (id)[UIColor colorWithHue:0 saturation:0.0f brightness:1.0f alpha:0.0f].CGColor,
+        nil];
+   gradient = CGGradientCreateWithColors(colorspace, (__bridge CFArrayRef)a, locations);
+   
+   CGContextDrawLinearGradient(context,gradient, edges[2], (CGPoint) { (edges[0].x + edges[1].x)/2,(edges[0].y + edges[1].y)/2}, kCGGradientDrawsBeforeStartLocation); 
+   CGGradientRelease(gradient);
+   
+   CGPathRelease(path);
+   
+   CGContextRestoreGState(context);
+
+}
+
+-(void)onMoveHueIndicator:(UIPanGestureRecognizer *) recognizer {
+   if ([recognizer state] == UIGestureRecognizerStateBegan || [recognizer state] == UIGestureRecognizerStateChanged) {
+   
+      CGRect viewFrame = self.frame;
+      viewFrame = (CGRect) { viewFrame.origin.x + self.insets.left, viewFrame.origin.y+ self.insets.top,
+         viewFrame.size.width - self.insets.left - self.insets.right, viewFrame.size.height - self.insets.top - self.insets.bottom};
+      CGPoint center = CGPointMake(CGRectGetMidX(viewFrame), CGRectGetMidY(viewFrame));
+      CGPoint t = [recognizer locationOfTouch:0 inView:self];
+      
+      float sat, brigt, hue = (M_PI - atan2f(t.y-center.y,center.x-t.x)) / (2 * M_PI);
+      [color_ getHue:NULL saturation:&sat brightness:&brigt alpha:NULL];
+      [self setColor:[UIColor colorWithHue:hue saturation:sat brightness:brigt alpha:1.0f]];
+   }
+}
+
+-(void)onMoveSVIndicator:(UIPanGestureRecognizer *) recognizer {
+   
+   if ([recognizer state] == UIGestureRecognizerStateBegan || [recognizer state] == UIGestureRecognizerStateChanged) {
+      
+      CGPoint t = [recognizer locationOfTouch:0 inView:self];
+
+      float sat, brigt, hue;
+      [color_ getHue:&hue saturation:NULL brightness:NULL alpha:NULL];
+      
+      [self getSaturation:&sat brightness:&brigt forHue:hue position:CGPointMake(t.x,t.y)];
+      NSLog(@"%f %f %f", hue, sat, brigt);
+      
+      [self setColor:[UIColor colorWithHue:hue saturation:sat brightness:brigt alpha:1.0f]];
+   }
+   
+}
+
+@end
