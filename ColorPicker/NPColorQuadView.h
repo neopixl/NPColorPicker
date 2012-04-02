@@ -16,21 +16,13 @@
 
 #import <UIKit/UIKit.h>
 
-@class NPColorPickerView;
+@interface NPColorQuadView : UIView
 
-@protocol NPColorPickerViewDelegate <NSObject> 
-
--(void)NPColorPickerView:(NPColorPickerView *)view didSelectColor:(UIColor *) color;
-
-@end
-
-extern NSString * kColorProperty;
-
-@interface NPColorPickerView : UIView
-
-@property (nonatomic, readwrite, strong) UIColor * color;
+@property (nonatomic, readwrite, assign) NSUInteger selectedIndex;
+@property (nonatomic, readonly, assign) UIColor * selectedColor;
 @property (nonatomic, readwrite, assign) UIEdgeInsets insets;
-@property (nonatomic, readwrite, assign) CGFloat donutThickness;
-@property (nonatomic, readwrite, assign) id<NPColorPickerViewDelegate> delegate;
+@property (nonatomic, readwrite, assign) NSUInteger depht;
+@property (nonatomic, readwrite, assign) CGSize intercellSpace;
+-(void) pushColor:(UIColor *) color;
 
 @end

@@ -16,7 +16,12 @@
 
 
 #import <UIKit/UIKit.h>
+#import "NPColorPickerView.h"
+#import "NPColorQuadView.h"
 
-@interface NPViewController : UIViewController
+@interface NPViewController : UIViewController <NPColorPickerViewDelegate>
+
+@property (weak, nonatomic) IBOutlet NPColorPickerView *colorPickerView;
+@property (weak, nonatomic) IBOutlet NPColorQuadView *colorQuadView;
 
 @end

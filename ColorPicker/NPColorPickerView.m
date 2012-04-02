@@ -24,6 +24,8 @@
 
 #define M_PI_3    M_PI/3 
 
+NSString * kColorProperty = @"color";
+
 @interface NPHueDonutLayer : CALayer {
 }
 @property (nonatomic, readwrite, assign) CGFloat donutThickness;
@@ -40,7 +42,7 @@
 -(id)init {
    self = [super init];
    if (self) {
-      [self setOpaque: NO];
+      //[self setOpaque: NO];
    }
    return self;
 }
@@ -50,9 +52,10 @@
    
    CGContextClearRect(context, frame);
    
-   CGFloat maxRadius = MIN(frame.size.width, frame.size.height) / 2;
-   CGFloat internalRadius = maxRadius - donutThickness_;
-   CGPoint center = CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
+   
+   CGFloat maxRadius = -1 + MIN(frame.size.width, frame.size.height) / 2;
+   CGFloat internalRadius = maxRadius - donutThickness_ + 2;
+   CGPoint center = CGPointMake(floorf(0.5f + CGRectGetMidX(frame)), floorf(0.5f + CGRectGetMidY(frame)));
    
    conicGradient_.center = center;
    conicGradient_.radius = maxRadius;
@@ -75,7 +78,7 @@
    CGContextRestoreGState(context);
    
    CGContextSetStrokeColorWithColor(context, [UIColor colorWithWhite:0.58 alpha:0.5] .CGColor);
-   CGContextSetLineWidth(context, 3.0f);
+   CGContextSetLineWidth(context, 2.5f);
    
    path = CGPathCreateMutable();
    CGPathAddRelativeArc(path, &CGAffineTransformIdentity, center.x, center.y, maxRadius, 0, 2*M_PI);
@@ -104,6 +107,8 @@
 
 // the width of the donut 
 @dynamic donutThickness;
+
+@synthesize  delegate;
 
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -319,12 +324,16 @@
 #pragma mark - Drawing
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
 - (void)drawRect:(CGRect)rect
 {
    CGContextRef context = UIGraphicsGetCurrentContext();
    CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
    
+   if ([self backgroundColor]) {
+      CGContextSetFillColorWithColor(context, [[self backgroundColor] CGColor]);
+      CGContextFillRect(context, self.bounds);
+   }
+
    CGRect frame = [self donutFrameForRect:self.bounds];
    
    CGFloat maxRadius = MIN(frame.size.width, frame.size.height) / 2;
@@ -519,9 +528,10 @@
       float sat, brigt, hue = (M_PI - atan2f(t.y-center.y,center.x-t.x)) / (2 * M_PI);
       [color_ getHue:NULL saturation:&sat brightness:&brigt alpha:NULL];
       [self setColor:[UIColor colorWithHue:hue saturation:sat brightness:brigt alpha:1.0f]];
+   } else if ([recognizer state] == UIGestureRecognizerStateEnded) {
+      [[self delegate] NPColorPickerView:self didSelectColor:color_]; 
    }
 }
-
 
 
 //--------------------------------------------------------------------------------------------------------------------
@@ -543,6 +553,8 @@
       [color_ getHue:&hue saturation:NULL brightness:NULL alpha:NULL];
       [self getSaturation:&sat brightness:&brigt position:CGPointMake(t.x,t.y)];
       [self setColor:[UIColor colorWithHue:hue saturation:sat brightness:brigt alpha:1.0f]];
+   } else if ([recognizer state] == UIGestureRecognizerStateEnded) {
+      [[self delegate] NPColorPickerView:self didSelectColor:color_]; 
    }
 }
 

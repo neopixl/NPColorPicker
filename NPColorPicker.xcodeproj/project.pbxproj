@@ -20,6 +20,7 @@
 		F0550A0C150A07B2006137B6 /* NPViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F0550A0B150A07B2006137B6 /* NPViewController.m */; };
 		F0550A0F150A07B2006137B6 /* NPViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = F0550A0D150A07B2006137B6 /* NPViewController.xib */; };
 		F0550A22150A07F6006137B6 /* NPColorPickerView.m in Sources */ = {isa = PBXBuildFile; fileRef = F0550A21150A07F6006137B6 /* NPColorPickerView.m */; };
+		F0B93A8F152A5CFF0064CE15 /* NPColorQuadView.m in Sources */ = {isa = PBXBuildFile; fileRef = F0B93A8E152A5CFF0064CE15 /* NPColorQuadView.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,10 +35,10 @@
 		F05509F8150A07B2006137B6 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		F05509FA150A07B2006137B6 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		F05509FC150A07B2006137B6 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
-		F0550A00150A07B2006137B6 /* NPColorPicker-Info.plist */ = {isa = PBXFileReference; path = "NPColorPicker-Info.plist"; sourceTree = "<group>"; };
+		F0550A00150A07B2006137B6 /* NPColorPicker-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "NPColorPicker-Info.plist"; sourceTree = "<group>"; };
 		F0550A02150A07B2006137B6 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		F0550A04150A07B2006137B6 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		F0550A06150A07B2006137B6 /* NPColorPicker-Prefix.pch */ = {isa = PBXFileReference; path = "NPColorPicker-Prefix.pch"; sourceTree = "<group>"; };
+		F0550A06150A07B2006137B6 /* NPColorPicker-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NPColorPicker-Prefix.pch"; sourceTree = "<group>"; };
 		F0550A07150A07B2006137B6 /* NPAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NPAppDelegate.h; sourceTree = "<group>"; };
 		F0550A08150A07B2006137B6 /* NPAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NPAppDelegate.m; sourceTree = "<group>"; };
 		F0550A0A150A07B2006137B6 /* NPViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NPViewController.h; sourceTree = "<group>"; };
@@ -45,6 +46,8 @@
 		F0550A0E150A07B2006137B6 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/NPViewController.xib; sourceTree = "<group>"; };
 		F0550A20150A07F6006137B6 /* NPColorPickerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NPColorPickerView.h; sourceTree = "<group>"; };
 		F0550A21150A07F6006137B6 /* NPColorPickerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NPColorPickerView.m; sourceTree = "<group>"; };
+		F0B93A8D152A5CFF0064CE15 /* NPColorQuadView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NPColorQuadView.h; sourceTree = "<group>"; };
+		F0B93A8E152A5CFF0064CE15 /* NPColorQuadView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NPColorQuadView.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,6 +110,8 @@
 				F03F6145150FB46800EBD6BD /* RGB-HSL.m */,
 				F03F614B150FEBEA00EBD6BD /* NPPickerIndicator.h */,
 				F03F614C150FEBEA00EBD6BD /* NPPickerIndicator.m */,
+				F0B93A8D152A5CFF0064CE15 /* NPColorQuadView.h */,
+				F0B93A8E152A5CFF0064CE15 /* NPColorQuadView.m */,
 			);
 			path = ColorPicker;
 			sourceTree = "<group>";
@@ -192,6 +197,7 @@
 				F03F6147150FB4D200EBD6BD /* NPConicGradient.m in Sources */,
 				F03F6146150FB46800EBD6BD /* RGB-HSL.m in Sources */,
 				F03F614D150FEBEA00EBD6BD /* NPPickerIndicator.m in Sources */,
+				F0B93A8F152A5CFF0064CE15 /* NPColorQuadView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

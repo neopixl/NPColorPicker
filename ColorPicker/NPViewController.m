@@ -22,22 +22,37 @@
 @end
 
 @implementation NPViewController
+@synthesize colorPickerView;
+@synthesize colorQuadView;
 
 - (void)viewDidLoad
 {
-    [super viewDidLoad];
-	// Do any additional setup after loading the view, typically from a nib.
+   [super viewDidLoad];
+
+   [[self colorQuadView] setBackgroundColor: [UIColor colorWithWhite:0 alpha:1.0f]];
+   [[self colorPickerView] setBackgroundColor: [UIColor colorWithWhite:0 alpha:1.0f]];
+   [[self colorPickerView] setDelegate:self];
 }
 
 - (void)viewDidUnload
 {
+   [self setColorPickerView:nil];
+   [self setColorQuadView:nil];
     [super viewDidUnload];
     // Release any retained subviews of the main view.
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
-{
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
    return UIInterfaceOrientationIsPortrait(interfaceOrientation);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma mark - NPColorPickerViewDelegate
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+-(void)NPColorPickerView:(NPColorPickerView *)view didSelectColor:(UIColor *)color {
+   [[self colorQuadView] pushColor:color];
 }
 
 @end
