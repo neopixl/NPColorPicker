@@ -24,183 +24,36 @@
 
 #define M_PI_3    M_PI/3 
 
-@implementation NPColorPickerView {
-   NPConicGradient * conicGradient_;
-   CALayer * svLayer_;
-   NSMutableArray * hueIndicators_;
-   NPPickerIndicator * hueIndicator_;
-   NPPickerIndicator * svIndicator_;
+@interface NPHueDonutLayer : CALayer {
 }
+@property (nonatomic, readwrite, assign) CGFloat donutThickness;
+@property (nonatomic, readwrite, retain) NPConicGradient * conicGradient;
 
-// the chosen color
-@synthesize color = color_;
+@end
 
-// the margin around the palette 
-@synthesize insets;
+@implementation NPHueDonutLayer 
 
 // the width of the donut 
-@synthesize haloThickness = haloThickness_;
+@synthesize donutThickness = donutThickness_;
+@synthesize conicGradient = conicGradient_; 
 
-
-//--------------------------------------------------------------------------------------------------------------------
-//
-// method:		   defaultInitializer_
-// scope:			private
-// description:	
-//                
-// parameters:		
-// result:			
-//
-// notes:			
-//
-//--------------------------------------------------------------------------------------------------------------------
-
--(void) defaultInitializer_ {
-   self.haloThickness = 50;
-   
-   self.insets = UIEdgeInsetsMake(15,15, 15, 15);
-   
-   conicGradient_ = [[NPConicGradient alloc]init];
-   conicGradient_.startAngle = 0;
-   conicGradient_.endAngle = 2*M_PI;
-   [conicGradient_ addColor:[UIColor colorWithHue:0.0001f saturation:1.0f brightness:1.0f alpha:1.0f] atPosition:0.0f ];
-   [conicGradient_ addColor:[UIColor colorWithHue:0.9999f saturation:1.0f brightness:1.0f alpha:1.0f] atPosition:1.0f ]; 
-   
-   conicGradient_.interpolater = ^void(CGFloat percent, CGFloat sourceComps[], CGFloat endComps[], CGFloat outCompts[], size_t s)  {
-      
-      CGFloat sh;
-      CGFloat ss; 
-      CGFloat sv;
-      
-      CGFloat eh;
-      CGFloat es; 
-      CGFloat ev;
-      
-      CGFloat ih;
-      CGFloat is; 
-      CGFloat iv;
-      
-      RGBtoHSV(sourceComps[0], sourceComps[1], sourceComps[2], &sh, &ss, &sv);
-      RGBtoHSV(endComps[0], endComps[1], endComps[2], &eh, &es, &ev);
-      
-      ih = sh + ((eh - sh) * percent);
-      is = ss + ((es - ss) * percent);
-      iv = sv + ((ev - sv) * percent);
-      outCompts[3] = sourceComps[3] + ((endComps[3] - sourceComps[3]) * percent);
-      
-      HSVtoRGB(&outCompts[0], &outCompts[1], &outCompts[2], ih, is, iv );
-   };
-   
-   svLayer_ = [CALayer layer];
-   svLayer_.delegate = self;
-   
-   hueIndicators_ = [[NSMutableArray alloc] initWithCapacity:3];
-   
-   hueIndicator_ = [[NPPickerIndicator alloc] initWithFrame:CGRectZero];
-   hueIndicator_.insets = UIEdgeInsetsMake(5,5,5,5);
-   hueIndicator_.borderWidth = 7;
-   [hueIndicators_ addObject:hueIndicator_];
-   [self addSubview:hueIndicator_];
-   UIPanGestureRecognizer * panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(onMoveHueIndicator:)];
-   [hueIndicator_ addGestureRecognizer:panGesture];
-   
-   svIndicator_ = [[NPPickerIndicator alloc] initWithFrame:CGRectZero];
-   svIndicator_.insets = UIEdgeInsetsMake(5,5,5,5);
-   svIndicator_.borderWidth = 7;
-   [self addSubview:svIndicator_];
-   
-   panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(onMoveSVIndicator:)];
-   [svIndicator_ addGestureRecognizer:panGesture];
-   
-   self.color = [UIColor colorWithHue:1.00 saturation:1.0f brightness:0.001f alpha:1.0f];
+-(id)init {
+   self = [super init];
+   if (self) {
+      [self setOpaque: NO];
+   }
+   return self;
 }
 
-
-- (id)initWithFrame:(CGRect)frame {
-    self = [super initWithFrame:frame];
-    if (self) {
-       [self defaultInitializer_];
-    }
-    return self;
-}
-
--(void)awakeFromNib {
-   [self defaultInitializer_];
-}
-
-
-//--------------------------------------------------------------------------------------------------------------------
-//
-// method:		   layoutSubviews
-// scope:			OS
-// description:	places the subviews (indicators) where they should BE ! 
-//                
-// parameters:		
-// result:			
-//
-// notes:			
-//--------------------------------------------------------------------------------------------------------------------
-
--(void)layoutSubviews {
-   [super layoutSubviews];
+-(void)drawInContext:(CGContextRef)context {
+   CGRect frame = self.bounds;
    
-   CGFloat hue, sat,brightness;
-   [color_ getHue:&hue saturation:&sat brightness:&brightness alpha:NULL];
+   CGContextClearRect(context, frame);
    
-   CGPoint center = [self indicatorCenterForHue:hue];
-   hueIndicator_ .frame = CGRectMake(center.x - (haloThickness_/2), center.y  - (haloThickness_/2), haloThickness_, haloThickness_);
+   CGFloat maxRadius = MIN(frame.size.width, frame.size.height) / 2;
+   CGFloat internalRadius = maxRadius - donutThickness_;
+   CGPoint center = CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
    
-   center = [self indicatorCenterForSaturation:sat brightness:brightness];
-   svIndicator_. frame = CGRectMake(center.x - (haloThickness_/2), center.y  - (haloThickness_/2), haloThickness_, haloThickness_);
-}
-
-
-//--------------------------------------------------------------------------------------------------------------------
-//
-// method:		   set the color and trigger view refresh:
-// scope:			private
-// description:	
-//                
-// parameters:		
-// result:			
-//
-// notes:			
-//--------------------------------------------------------------------------------------------------------------------
-
--(void)setColor:(UIColor *)color {
-   
-   color_ = color;
-   
-   CGFloat hue, sat,brightness;
-   [color_ getHue:&hue saturation:&sat brightness:&brightness alpha:NULL];
-   
-   hueIndicator_.fillColor = [UIColor colorWithHue:hue saturation:1.0f brightness:1.0f alpha:1.0f];
-   svIndicator_.fillColor = color_;
-   
-   [self setNeedsLayout];
-   [self setNeedsDisplay];
-   [hueIndicator_ setNeedsDisplay];
-   [svIndicator_ setNeedsDisplay];
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark - Drawing
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-- (void)drawRect:(CGRect)rect
-{
-   CGContextRef context = UIGraphicsGetCurrentContext();
-   CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
-   
-   CGRect viewFrame = self.bounds;
-   viewFrame = (CGRect) { viewFrame.origin.x + self.insets.left, viewFrame.origin.y+ self.insets.top,
-      viewFrame.size.width - self.insets.left - self.insets.right, viewFrame.size.height - self.insets.top - self.insets.bottom};
-   
-   // draw the hue gradient halo 
-   CGFloat maxRadius = MIN(viewFrame.size.width, viewFrame.size.height) / 2;
-   CGFloat internalRadius = maxRadius - haloThickness_;
-   CGPoint center = CGPointMake(CGRectGetMidX(viewFrame), CGRectGetMidY(viewFrame));
    conicGradient_.center = center;
    conicGradient_.radius = maxRadius;
    
@@ -231,9 +84,254 @@
    CGContextAddPath(context, path);
    CGContextStrokePath(context);
    CGPathRelease(path);
+}
+
+@end
+
+
+@implementation NPColorPickerView {
+   NSMutableArray * hueIndicators_;
+   NPPickerIndicator * hueIndicator_;
+   NPPickerIndicator * svIndicator_;
+   NPHueDonutLayer * donutLayer_;
+}
+
+// the chosen color
+@synthesize color = color_;
+
+// the margin around the palette 
+@synthesize insets;
+
+// the width of the donut 
+@dynamic donutThickness;
+
+
+//--------------------------------------------------------------------------------------------------------------------
+//
+// method:		   defaultInitializer_
+// scope:			private
+// description:	
+//                
+// parameters:		
+// result:			
+//
+// notes:			
+//
+//--------------------------------------------------------------------------------------------------------------------
+
+-(void) defaultInitializer_ {
    
-   CGContextSaveGState(context);
+   self.insets = UIEdgeInsetsMake(15,15, 15, 15);
    
+   donutLayer_ = [NPHueDonutLayer layer];
+   
+   NPConicGradient * conicGradient = [[NPConicGradient alloc]init];
+   conicGradient.startAngle = 0;
+   conicGradient.endAngle = 2*M_PI;
+   [conicGradient addColor:[UIColor colorWithHue:0.0001f saturation:1.0f brightness:1.0f alpha:1.0f] atPosition:0.0f ];
+   [conicGradient addColor:[UIColor colorWithHue:0.9999f saturation:1.0f brightness:1.0f alpha:1.0f] atPosition:1.0f ]; 
+   
+   conicGradient.interpolater = ^void(CGFloat percent, CGFloat sourceComps[], CGFloat endComps[], CGFloat outCompts[], size_t s)  {
+      
+      CGFloat sh;
+      CGFloat ss; 
+      CGFloat sv;
+      
+      CGFloat eh;
+      CGFloat es; 
+      CGFloat ev;
+      
+      CGFloat ih;
+      CGFloat is; 
+      CGFloat iv;
+      
+      RGBtoHSV(sourceComps[0], sourceComps[1], sourceComps[2], &sh, &ss, &sv);
+      RGBtoHSV(endComps[0], endComps[1], endComps[2], &eh, &es, &ev);
+      
+      ih = sh + ((eh - sh) * percent);
+      is = ss + ((es - ss) * percent);
+      iv = sv + ((ev - sv) * percent);
+      outCompts[3] = sourceComps[3] + ((endComps[3] - sourceComps[3]) * percent);
+      
+      HSVtoRGB(&outCompts[0], &outCompts[1], &outCompts[2], ih, is, iv );
+   };
+   
+   [donutLayer_ setConicGradient:conicGradient];
+   
+   self.donutThickness = 50;
+   
+   [[self layer] addSublayer: donutLayer_];
+   
+   hueIndicators_ = [[NSMutableArray alloc] initWithCapacity:3];
+   
+   hueIndicator_ = [[NPPickerIndicator alloc] initWithFrame:CGRectZero];
+   hueIndicator_.insets = UIEdgeInsetsMake(5,5,5,5);
+   hueIndicator_.borderWidth = 7;
+   [hueIndicators_ addObject:hueIndicator_];
+   [self addSubview:hueIndicator_];
+   UIPanGestureRecognizer * panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(onMoveHueIndicator:)];
+   [hueIndicator_ addGestureRecognizer:panGesture];
+   
+   svIndicator_ = [[NPPickerIndicator alloc] initWithFrame:CGRectZero];
+   svIndicator_.insets = UIEdgeInsetsMake(5,5,5,5);
+   svIndicator_.borderWidth = 7;
+   [self addSubview:svIndicator_];
+   
+   panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(onMoveSVIndicator:)];
+   [svIndicator_ addGestureRecognizer:panGesture];
+   
+   self.color = [UIColor colorWithHue:1.00 saturation:1.0f brightness:0.001f alpha:1.0f];
+   
+   [donutLayer_ setNeedsDisplay];
+}
+
+
+- (id)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+       [self defaultInitializer_];
+    }
+    return self;
+}
+
+-(void)awakeFromNib {
+   [self defaultInitializer_];
+}
+
+//--------------------------------------------------------------------------------------------------------------------
+//
+// method:		   haloThickness
+// scope:			
+// description:	 
+//                
+// parameters:		
+// result:			
+//
+// notes:			
+//--------------------------------------------------------------------------------------------------------------------
+
+
+-(void)setDonutThickness:(CGFloat)donutThickness {
+   [donutLayer_ setDonutThickness:donutThickness]; 
+}
+
+//--------------------------------------------------------------------------------------------------------------------
+//
+// method:		   haloThickness
+// scope:			
+// description:	 
+//                
+// parameters:		
+// result:			
+//
+// notes:			
+//--------------------------------------------------------------------------------------------------------------------
+
+
+-(CGFloat) donutThickness {
+   return [donutLayer_ donutThickness];
+}
+
+//--------------------------------------------------------------------------------------------------------------------
+//
+// method:		   layoutSubviews
+// scope:			OS
+// description:	places the subviews (indicators) where they should BE ! 
+//                
+// parameters:		
+// result:			
+//
+// notes:			
+//--------------------------------------------------------------------------------------------------------------------
+
+-(void)layoutSubviews {
+   [super layoutSubviews];
+   
+   donutLayer_.frame = [self donutFrameForRect:self.bounds];
+   
+   CGFloat hue, sat,brightness;
+   [color_ getHue:&hue saturation:&sat brightness:&brightness alpha:NULL];
+   
+   CGPoint center = [self indicatorCenterForHue:hue];
+   hueIndicator_ .frame = CGRectMake(floorf(0.5f + center.x - (self.donutThickness/2)),
+                                     floorf(0.5f + center.y - (self.donutThickness/2)),
+                                     self.donutThickness, self.donutThickness);
+   
+   center = [self indicatorCenterForSaturation:sat brightness:brightness];
+   svIndicator_. frame = CGRectMake(floorf(0.5f + center.x - (self.donutThickness/2)),
+                                    floorf(0.5f + center.y  - (self.donutThickness/2)), 
+                                    self.donutThickness, self.donutThickness);
+}
+
+
+//--------------------------------------------------------------------------------------------------------------------
+//
+// method:		   set the color and trigger view refresh:
+// scope:			private
+// description:	
+//                
+// parameters:		
+// result:			
+//
+// notes:			
+//--------------------------------------------------------------------------------------------------------------------
+
+-(void)setColor:(UIColor *)color {
+   
+   color_ = color;
+   
+   CGFloat hue, sat,brightness;
+   [color_ getHue:&hue saturation:&sat brightness:&brightness alpha:NULL];
+   
+   hueIndicator_.fillColor = [UIColor colorWithHue:hue saturation:1.0f brightness:1.0f alpha:1.0f];
+   svIndicator_.fillColor = color_;
+   
+   CGRect frame = [self donutFrameForRect:self.bounds];
+   CGFloat maxRadius = MIN(frame.size.width, frame.size.height) / 2;
+   CGFloat internalRadius = maxRadius - self.donutThickness;
+   CGPoint center = CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
+
+   [self setNeedsLayout];
+   [self setNeedsDisplayInRect:CGRectMake(center.x - internalRadius, center.y-internalRadius, internalRadius * 2, internalRadius * 2)];
+   [hueIndicator_ setNeedsDisplay];
+   [svIndicator_ setNeedsDisplay];
+}
+
+
+//--------------------------------------------------------------------------------------------------------------------
+//
+// method:		   set the color and trigger view refresh:
+// scope:			private
+// description:	
+//                
+// parameters:		
+// result:			
+//
+// notes:			
+//--------------------------------------------------------------------------------------------------------------------
+
+-(CGRect) donutFrameForRect:(CGRect) rect {
+   return (CGRect) { rect.origin.x + self.insets.left, rect.origin.y+ self.insets.top,
+      rect.size.width - self.insets.left - self.insets.right, rect.size.height - self.insets.top - self.insets.bottom};
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma mark - Drawing
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+- (void)drawRect:(CGRect)rect
+{
+   CGContextRef context = UIGraphicsGetCurrentContext();
+   CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
+   
+   CGRect frame = [self donutFrameForRect:self.bounds];
+   
+   CGFloat maxRadius = MIN(frame.size.width, frame.size.height) / 2;
+   CGFloat internalRadius = maxRadius - self.donutThickness;
+   CGPoint center = CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
+
+   CGMutablePathRef path = NULL;
    // triangle
    CGPoint edges[3]; 
    edges[0] = (CGPoint) { center.x + cosf(0) * internalRadius, center.y + sinf(0) * internalRadius };   
@@ -253,20 +351,17 @@
    CGFloat hue;
    [self.color getHue:&hue saturation:NULL brightness:NULL alpha:NULL];
    
-   NSArray * a = [NSArray arrayWithObjects:
-                  (id)[UIColor colorWithHue:hue saturation:1.0f brightness:1.0f alpha:1.0f].CGColor,
-                  (id)[UIColor colorWithHue:hue saturation:1.0f brightness:1.0f alpha:1.0f].CGColor,
-                  nil];
-   CGFloat locations[]  = {0.0f, 1.0f};
+   CGContextSetFillColorWithColor(context, [UIColor colorWithHue:hue saturation:1.0f brightness:1.0f alpha:1.0f].CGColor);
+   CGContextFillRect(context, 
+                     CGRectMake(center.x - internalRadius, center.y-internalRadius, internalRadius * 2, internalRadius * 2));
    
-   CGGradientRef gradient = CGGradientCreateWithColors(colorspace, (__bridge CFArrayRef)a, locations);
-   CGContextDrawLinearGradient(context,gradient, edges[0], (CGPoint) { (edges[1].x + edges[2].x)/2,(edges[1].y + edges[2].y)/2}, kCGGradientDrawsBeforeStartLocation); 
-   CGGradientRelease(gradient);
-   a = [NSArray arrayWithObjects:
+   CGFloat locations[]  = {0.0f, 1.0f};
+   CGGradientRef gradient;
+   
+   NSArray * a = [NSArray arrayWithObjects:
         (id)[UIColor colorWithHue:0 saturation:1.0f brightness:0.0f alpha:1.0f].CGColor,
         (id)[UIColor colorWithHue:0 saturation:1.0f brightness:0.0f alpha:0.0f].CGColor,
         nil];
-   
    
    gradient = CGGradientCreateWithColors(colorspace, (__bridge CFArrayRef)a, locations);
    
@@ -282,10 +377,7 @@
    CGGradientRelease(gradient);
    
    CGPathRelease(path);
-   
-   CGContextRestoreGState(context);
 }
-
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -306,13 +398,12 @@
 //--------------------------------------------------------------------------------------------------------------------
 
 -(CGPoint)indicatorCenterForHue:(CGFloat) hue {
-   CGRect viewFrame = self.bounds;
-   viewFrame = (CGRect) { viewFrame.origin.x + self.insets.left, viewFrame.origin.y+ self.insets.top,
-      viewFrame.size.width - self.insets.left - self.insets.right, viewFrame.size.height - self.insets.top - self.insets.bottom};
 
-   CGFloat radius = ((MIN(viewFrame.size.width, viewFrame.size.height) - haloThickness_ ) / 2);
+   CGRect frame = [self donutFrameForRect:self.bounds];
+   
+   CGFloat radius = ((MIN(frame.size.width, frame.size.height) - self.donutThickness ) / 2);
    CGFloat hueRad =  hue * 2 * M_PI;
-   CGPoint center = CGPointMake(CGRectGetMidX(viewFrame), CGRectGetMidY(viewFrame));
+   CGPoint center = CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
    return (CGPoint) { center.x + (cosf(hueRad) * radius),  center.y + (sinf(hueRad) * radius) };
 }
 
@@ -331,11 +422,11 @@
 //--------------------------------------------------------------------------------------------------------------------
 
 -(CGPoint)indicatorCenterForSaturation:(CGFloat) saturation brightness:(CGFloat) brightness {
-   CGRect viewFrame = self.bounds;
-   viewFrame = (CGRect) { viewFrame.origin.x + self.insets.left, viewFrame.origin.y+ self.insets.top,
-      viewFrame.size.width - self.insets.left - self.insets.right, viewFrame.size.height - self.insets.top - self.insets.bottom};
-   CGFloat internalRadius = (MIN(viewFrame.size.width, viewFrame.size.height) / 2) - haloThickness_;
-   CGPoint center = CGPointMake(CGRectGetMidX(viewFrame), CGRectGetMidY(viewFrame));
+
+   CGRect frame = [self donutFrameForRect:self.bounds];
+
+   CGFloat internalRadius = (MIN(frame.size.width, frame.size.height) / 2) - self.donutThickness;
+   CGPoint center = CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
 
    CGFloat teta = M_PI_3 * saturation;
 
@@ -367,7 +458,7 @@
    CGRect viewFrame = self.bounds;
    viewFrame = (CGRect) { viewFrame.origin.x + self.insets.left, viewFrame.origin.y+ self.insets.top,
       viewFrame.size.width - self.insets.left - self.insets.right, viewFrame.size.height - self.insets.top - self.insets.bottom};
-   CGFloat internalRadius = (MIN(viewFrame.size.width, viewFrame.size.height) / 2) - haloThickness_;
+   CGFloat internalRadius = (MIN(viewFrame.size.width, viewFrame.size.height) / 2) - self.donutThickness;
    CGPoint center = CGPointMake(CGRectGetMidX(viewFrame), CGRectGetMidY(viewFrame));
 
    CGPoint s = (CGPoint) { cosf(2*M_PI_3) * internalRadius, sinf(2*M_PI_3) * internalRadius };   

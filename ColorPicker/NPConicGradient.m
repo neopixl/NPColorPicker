@@ -135,8 +135,7 @@
    NSParameterAssert([positions_ count]>1);
    GradientPosition * spos = [positions_ objectAtIndex:0];
    CGColorSpaceRef cs = CGColorSpaceCreateDeviceRGB();
-   CGContextSetStrokeColorSpace(context, cs);
-   
+   CGContextSetFillColorSpace(context, cs);
 
    CGFloat startAngle = startAngle_ + ((endAngle_ - startAngle_) * spos.position);
    CGPoint prev =  CGPointMake(center_.x + cosf(startAngle) * radius_, center_.y + sinf(startAngle) * radius_);
@@ -159,6 +158,7 @@
 
          interpolater_((angle - startAngle) / (endAngle - startAngle), sc, ec, c, 4);
          CGContextSetFillColor(context,c);
+         CGContextSetStrokeColor(context,c);
          
          part[0] = center_;
          part[1] = prev;

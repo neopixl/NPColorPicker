@@ -20,6 +20,6 @@
 
 @property (nonatomic, readwrite, strong) UIColor * color;
 @property (nonatomic, readwrite, assign) UIEdgeInsets insets;
-@property (nonatomic, readwrite, assign) CGFloat haloThickness;
+@property (nonatomic, readwrite, assign) CGFloat donutThickness;
 
 @end
