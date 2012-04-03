@@ -77,8 +77,8 @@ NSString * kColorProperty = @"color";
    
    CGContextRestoreGState(context);
    
-   CGContextSetStrokeColorWithColor(context, [UIColor colorWithWhite:0.58 alpha:0.5] .CGColor);
-   CGContextSetLineWidth(context, 2.5f);
+   CGContextSetStrokeColorWithColor(context, [UIColor colorWithWhite:0.80 alpha:0.45] .CGColor);
+   CGContextSetLineWidth(context, 2.0f);
    
    path = CGPathCreateMutable();
    CGPathAddRelativeArc(path, &CGAffineTransformIdentity, center.x, center.y, maxRadius, 0, 2*M_PI);
