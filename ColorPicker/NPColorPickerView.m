@@ -97,6 +97,9 @@ NSString * kColorProperty = @"color";
    NPPickerIndicator * hueIndicator_;
    NPPickerIndicator * svIndicator_;
    NPHueDonutLayer * donutLayer_;
+   
+   UIImage * gradientOverlay_;
+   CGRect cachedDonutFrame_;
 }
 
 // the chosen color
@@ -254,6 +257,11 @@ NSString * kColorProperty = @"color";
    
    donutLayer_.frame = [self donutFrameForRect:self.bounds];
    
+   if (!CGRectEqualToRect(donutLayer_.frame, cachedDonutFrame_)) {
+      gradientOverlay_ = nil;
+      cachedDonutFrame_ = donutLayer_.frame;
+   }
+   
    CGFloat hue, sat,brightness;
    [color_ getHue:&hue saturation:&sat brightness:&brightness alpha:NULL];
    
@@ -291,13 +299,10 @@ NSString * kColorProperty = @"color";
    hueIndicator_.fillColor = [UIColor colorWithHue:hue saturation:1.0f brightness:1.0f alpha:1.0f];
    svIndicator_.fillColor = color_;
    
-   CGRect frame = [self donutFrameForRect:self.bounds];
-   CGFloat maxRadius = MIN(frame.size.width, frame.size.height) / 2;
-   CGFloat internalRadius = maxRadius - self.donutThickness;
-   CGPoint center = CGPointMake(CGRectGetMidX(frame), CGRectGetMidY(frame));
 
    [self setNeedsLayout];
-   [self setNeedsDisplayInRect:CGRectMake(center.x - internalRadius, center.y-internalRadius, internalRadius * 2, internalRadius * 2)];
+   [self setNeedsDisplay];
+
    [hueIndicator_ setNeedsDisplay];
    [svIndicator_ setNeedsDisplay];
 }
@@ -356,7 +361,8 @@ NSString * kColorProperty = @"color";
    
    CGContextAddPath(context, path);
    CGContextClip(context);
-   
+   CGPathRelease(path);
+
    CGFloat hue;
    [self.color getHue:&hue saturation:NULL brightness:NULL alpha:NULL];
    
@@ -364,28 +370,47 @@ NSString * kColorProperty = @"color";
    CGContextFillRect(context, 
                      CGRectMake(center.x - internalRadius, center.y-internalRadius, internalRadius * 2, internalRadius * 2));
    
-   CGFloat locations[]  = {0.0f, 1.0f};
-   CGGradientRef gradient;
    
-   NSArray * a = [NSArray arrayWithObjects:
-        (id)[UIColor colorWithHue:0 saturation:1.0f brightness:0.0f alpha:1.0f].CGColor,
-        (id)[UIColor colorWithHue:0 saturation:1.0f brightness:0.0f alpha:0.0f].CGColor,
-        nil];
+   CGRect centerRect = CGRectMake(center.x - internalRadius, center.y-internalRadius, internalRadius * 2, internalRadius * 2);
+
+   if (gradientOverlay_ == nil) {
+      UIGraphicsBeginImageContextWithOptions(centerRect.size, NO, 0.0);
+      context = UIGraphicsGetCurrentContext();
+      CGContextConcatCTM(context,CGAffineTransformMakeTranslation(-centerRect.origin.x, -centerRect.origin.y));
+      
+      CGFloat locations[]  = {0.0f, 1.0f};
+      CGGradientRef gradient;
+      
+      NSArray * a = [NSArray arrayWithObjects:
+                     (id)[UIColor colorWithHue:0 saturation:1.0f brightness:0.0f alpha:1.0f].CGColor,
+                     (id)[UIColor colorWithHue:0 saturation:1.0f brightness:0.0f alpha:0.0f].CGColor,
+                     nil];
+      
+      gradient = CGGradientCreateWithColors(colorspace, (__bridge CFArrayRef)a, locations);
+      
+      CGContextDrawLinearGradient(context, gradient, edges[1], (CGPoint) { (edges[0].x + edges[2].x)/2 ,(edges[0].y + edges[2].y)/2 }, kCGGradientDrawsBeforeStartLocation); 
+      CGGradientRelease(gradient);
+      a = [NSArray arrayWithObjects:
+           (id)[UIColor colorWithHue:0 saturation:0.0f brightness:1.0f alpha:1.0f].CGColor,
+           (id)[UIColor colorWithHue:0 saturation:0.0f brightness:1.0f alpha:0.0f].CGColor,
+           nil];
+      gradient = CGGradientCreateWithColors(colorspace, (__bridge CFArrayRef)a, locations);
+      
+      CGContextDrawLinearGradient(context,gradient, edges[2], (CGPoint) { (edges[0].x + edges[1].x)/2,(edges[0].y + edges[1].y)/2 }, kCGGradientDrawsBeforeStartLocation); 
+      CGGradientRelease(gradient);
+      
+      gradientOverlay_ =  UIGraphicsGetImageFromCurrentImageContext();
+      UIGraphicsEndImageContext();
+      
+      context = UIGraphicsGetCurrentContext();
+   }
    
-   gradient = CGGradientCreateWithColors(colorspace, (__bridge CFArrayRef)a, locations);
-   
-   CGContextDrawLinearGradient(context,gradient, edges[1], (CGPoint) { (edges[0].x + edges[2].x)/2,(edges[0].y + edges[2].y)/2}, kCGGradientDrawsBeforeStartLocation); 
-   CGGradientRelease(gradient);
-   a = [NSArray arrayWithObjects:
-        (id)[UIColor colorWithHue:0 saturation:0.0f brightness:1.0f alpha:1.0f].CGColor,
-        (id)[UIColor colorWithHue:0 saturation:0.0f brightness:1.0f alpha:0.0f].CGColor,
-        nil];
-   gradient = CGGradientCreateWithColors(colorspace, (__bridge CFArrayRef)a, locations);
-   
-   CGContextDrawLinearGradient(context,gradient, edges[2], (CGPoint) { (edges[0].x + edges[1].x)/2,(edges[0].y + edges[1].y)/2}, kCGGradientDrawsBeforeStartLocation); 
-   CGGradientRelease(gradient);
-   
-   CGPathRelease(path);
+   CGContextSaveGState(context); 
+   CGContextTranslateCTM(context, 0, centerRect.size.height);
+   CGContextScaleCTM(context, 1.0, -1.0);
+   CGContextDrawImage(context, (CGRect){CGPointMake(centerRect.origin.x, -centerRect.origin.y), centerRect.size}, [gradientOverlay_ CGImage]);
+   CGContextRestoreGState(context);
+
 }
 
 
