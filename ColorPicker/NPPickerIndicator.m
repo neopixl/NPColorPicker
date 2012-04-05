@@ -61,6 +61,7 @@
    CGContextAddPath(context, path);
    CGContextDrawPath(context, kCGPathEOFillStroke);
    CGContextRestoreGState(context);
+   CGPathRelease(path);
 }
 
 @end
