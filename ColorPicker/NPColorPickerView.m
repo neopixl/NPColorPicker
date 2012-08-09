@@ -405,6 +405,7 @@ NSString * kColorProperty = @"color";
       context = UIGraphicsGetCurrentContext();
    }
    
+   CGColorSpaceRelease(colorspace);
    CGContextSaveGState(context); 
    CGContextTranslateCTM(context, 0, centerRect.size.height);
    CGContextScaleCTM(context, 1.0, -1.0);
